@@ -4,6 +4,8 @@
 #include <math.h>
 #include "md5.h"
 
+/*第78行的字符串为加密内容
+ * */
 
 /*填充串
 输入初始字符串，输入补位和填充长度后的Md5块（512 bits)*/
@@ -53,6 +55,7 @@ MD5_Block *MD5Pack(unsigned char* input, unsigned int *length) {
     return output;
 }
 
+/*转化为小端编码*/
 unsigned int little_e(unsigned int x) {
     unsigned int r = 0;
     for(unsigned int i = 0; i < sizeof(x); i++) {
@@ -61,6 +64,7 @@ unsigned int little_e(unsigned int x) {
     }
     return r;
 }
+
 
 unsigned int main() {
     long long t_32 = 0x100000000;
@@ -73,19 +77,25 @@ unsigned int main() {
     unsigned int h2 = 0x98badcfe;
     unsigned int h3 = 0x10325476;
 
+    //加密的字符串
+    unsigned char* s = "12345678901234567890123456789012345678901234567890123456789012345678901234567890";
 
-    unsigned char* str = (unsigned char*)malloc(80);
-    strcpy(str, "12345678901234567890123456789012345678901234567890123456789012345678901234567890");
-    printf("length: %d\n", strlen(str));
+    unsigned int l = strlen(s);
+    unsigned char* str = (unsigned char*)malloc(l);
+    strcpy(str, s);
+
     unsigned int len = 0;
     MD5_Block*md5Blocks = MD5Pack(str, &len);
+
+    //每个512 bits的块
     for(unsigned int i = 0; i < len; i++) {
         unsigned int a = h0;
         unsigned int b = h1;
         unsigned int c = h2;
         unsigned int d = h3;
-
         MD5_Block md5Block = md5Blocks[i];
+
+        //4轮64步加密
         for(unsigned int j = 0; j < 64; j++) {
             unsigned int f = 0;
             unsigned int g = 0;
@@ -117,6 +127,8 @@ unsigned int main() {
         h2 = h2 + c;
         h3 = h3 + d;
     }
+
+    //输出密文
     printf("%08x%08x%08x%08x", little_e(h0), little_e(h1), little_e(h2), little_e(h3));
     return 0;
 }
