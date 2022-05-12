@@ -45,9 +45,11 @@ MD5_Block *MD5Pack(unsigned char* input, unsigned int *length) {
         unsigned int j = i * 64;
         unsigned int j_ = (i + 1) * 64;
         for(j; j < j_; j+=4) {
-            md5Block.digest[k] = input[j] | input[j + 1] << 8 | input[j + 2] << 16 | input[j + 3] << 24;
+            unsigned int md5_block_512 = input[j] | input[j + 1] << 8 | input[j + 2] << 16 | input[j + 3] << 24;
+            md5Block.digest[k] = (unsigned short)md5_block_512;
+            md5Block.digest[k+1] = (unsigned short)(md5_block_512>>4);
 //            printf("%08x", md5Block.digest[k]);
-            k++;
+            k = k+2;
         }
         output[i] = md5Block;
     }
@@ -76,6 +78,7 @@ unsigned int main() {
     unsigned short h1 = 0xefcd;
     unsigned short h2 = 0x98ba;
     unsigned short h3 = 0x1032;
+    unsigned short h4 = 0xdcfe;
 
     //加密的字符串
     unsigned char* s = "12345678901234567890123456789012345678901234567890123456789012345678901234567890";
@@ -93,45 +96,49 @@ unsigned int main() {
         unsigned short b = h1;
         unsigned short c = h2;
         unsigned short d = h3;
+        unsigned short e = h4;
         MD5_Block md5Block = md5Blocks[i];
 
-        //4轮64步加密
-        for(unsigned short j = 0; j < 64; j++) {
+        //5轮160步加密
+        for(unsigned int j = 0; j < 160; j++) {
             unsigned short f = 0;
-            unsigned short g = 0;
-            if (j <= 15) {
-                f = F(b, c, d);
+            unsigned int g = 0;
+            if (j <= 31) {
+                f = F(b, c, d, e);
                 g = j;
             }
-            else if (j >= 16 && j <= 31) {
-                f = G(b, c, d);
-                g = (5 * j + 1) & 0x0f;
+            else if (j >= 32 && j <= 63) {
+                f = G(b, c, d, e);
+                g = (5 * j + 1) & 0x1f;
             }
-            else if (j >= 32 && j <= 47) {
-                f = H(b, c, d);
-                g = (3 * j + 5) & 0x0f;
+            else if (j >= 64 && j <= 95) {
+                f = H(b, c, d, e);
+                g = (3 * j + 5) & 0x1f;
             }
-            else if (j >= 48) {
-                f = I(b, c, d);
-                g = (7 * j) & 0x0f;
+            else if (j >= 96 && j <= 127) {
+                f = I(b, c, d, e);
+                g = (7 * j) & 0x1f;
             }
-
-            unsigned short md5Block_low = (unsigned short)md5Block.digest[g];
-            unsigned short md5Block_high = (unsigned short)(md5Block.digest[g]>>4);
+            else if (j >= 128 && j <= 159) {
+                f = K(b, c, d, e);
+                g = (11 * j + 7) & 0x1f;
+            }
             
-            unsigned short tmp = d;
+            unsigned short tmp = e;
+            e = d;
             d = c;
             c = b;
-            b = l_rot(a + f + T[j] + md5Block_low + md5Block_high, r[j]) + b;
+            b = l_rot(a + f + T[j] + md5Block.digest[g], r[j]) + b;
             a = tmp;
         }
         h0 = h0 + a;
         h1 = h1 + b;
         h2 = h2 + c;
         h3 = h3 + d;
+        h4 = h4 + e;
     }
 
     //输出密文
-    printf("%04x%04x%04x%04x", little_e(h0), little_e(h1), little_e(h2), little_e(h3));
+    printf("%04x%04x%04x%04x%04x", little_e(h0), little_e(h1), little_e(h2), little_e(h3), little_e(h4));
     return 0;
 }
