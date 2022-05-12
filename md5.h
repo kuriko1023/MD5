@@ -22,5 +22,6 @@ typedef struct {
 
 MD5_Block *MD5Pack(unsigned char* input, unsigned int *length);
 
+unsigned int md5(unsigned char* buffer);
 
 #endif //MD5_MD5_H

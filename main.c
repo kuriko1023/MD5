@@ -65,8 +65,7 @@ unsigned int little_e(unsigned int x) {
     return r;
 }
 
-
-unsigned int main() {
+unsigned int md5(unsigned char* s) {
     long long t_32 = 0x100000000;
     for(unsigned int i = 0; i < 64; i++) {
         T[i] = floor(fabs(sin(i + 1)) * t_32);
@@ -78,7 +77,7 @@ unsigned int main() {
     unsigned int h3 = 0x10325476;
 
     //加密的字符串
-    unsigned char* s = "12345678901234567890123456789012345678901234567890123456789012345678901234567890";
+    // unsigned char* s = "12345678901234567890123456789012345678901234567890123456789012345678901234567890";
 
     unsigned int l = strlen(s);
     unsigned char* str = (unsigned char*)malloc(l);
@@ -129,6 +128,6 @@ unsigned int main() {
     }
 
     //输出密文
-    printf("%08x%08x%08x%08x", little_e(h0), little_e(h1), little_e(h2), little_e(h3));
+    printf("%08x%08x%08x%08x\n", little_e(h0), little_e(h1), little_e(h2), little_e(h3));
     return 0;
 }
