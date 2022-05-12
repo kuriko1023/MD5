@@ -21,7 +21,7 @@ typedef struct {
 #define K(b,c,d,e) ((~c | d) ^ (~b | e))
 #define l_rot(x,n) ((x << n) | (x >> (16 - n)))
 
-MD5_Block *MD5Pack(unsigned char* input, unsigned int *length);
+unsigned short **MD5Pack(unsigned char* input, unsigned int *length);
 
 
 #endif //MD5_MD5_H

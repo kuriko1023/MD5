@@ -2,14 +2,23 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
 #include "md5_Yifeng.h"
+
+#define BUFFER_SIZE 10000
+
+unsigned short h0 = 0x6745;
+unsigned short h1 = 0xefcd;
+unsigned short h2 = 0x98ba;
+unsigned short h3 = 0x1032;
+unsigned short h4 = 0xdcfe;
 
 /*第78行的字符串为加密内容
  * */
 
 /*填充串
 输入初始字符串，输入补位和填充长度后的Md5块（512 bits)*/
-MD5_Block *MD5Pack(unsigned char* input, unsigned int *length) {
+unsigned short **MD5Pack(unsigned char* input, unsigned int *length) {
     unsigned int len = strlen(input);
     unsigned int t = len  & 0x3f;   //bits mod 512
     unsigned int pad = t > 56 ? 120 - t : 56 - t;  // 补位
@@ -38,16 +47,16 @@ MD5_Block *MD5Pack(unsigned char* input, unsigned int *length) {
 //    printf("\n");
 
     *length = len_p / 64;
-    MD5_Block *output = (MD5_Block*)malloc(sizeof(MD5_Block) * (len_p / 64));
+    unsigned short **output = (unsigned short**)malloc(sizeof(unsigned short*) * (len_p / 64));
     for (unsigned int i = 0; i < *length; i++) {
-        MD5_Block md5Block;
+        unsigned short* md5Block = (unsigned short*)malloc(sizeof(unsigned short) * 32);
         unsigned int k = 0;
         unsigned int j = i * 64;
         unsigned int j_ = (i + 1) * 64;
         for(j; j < j_; j+=4) {
             unsigned int md5_block_512 = input[j] | input[j + 1] << 8 | input[j + 2] << 16 | input[j + 3] << 24;
-            md5Block.digest[k] = (unsigned short)md5_block_512;
-            md5Block.digest[k+1] = (unsigned short)(md5_block_512>>4);
+            md5Block[k] = (unsigned short)md5_block_512;
+            md5Block[k+1] = (unsigned short)(md5_block_512>>4);
 //            printf("%08x", md5Block.digest[k]);
             k = k+2;
         }
@@ -68,27 +77,9 @@ unsigned int little_e(unsigned short x) {
 }
 
 
-unsigned int main() {
-    long long t_32 = 0x100000000;
-    for(unsigned int i = 0; i < 64; i++) {
-        T[i] = floor(fabs(sin(i + 1)) * t_32);
-    }
-
-    unsigned short h0 = 0x6745;
-    unsigned short h1 = 0xefcd;
-    unsigned short h2 = 0x98ba;
-    unsigned short h3 = 0x1032;
-    unsigned short h4 = 0xdcfe;
-
-    //加密的字符串
-    unsigned char* s = "12345678901234567890123456789012345678901234567890123456789012345678901234567890";
-
-    unsigned int l = strlen(s);
-    unsigned char* str = (unsigned char*)malloc(l);
-    strcpy(str, s);
-
+void hash(unsigned char* buf) {
     unsigned int len = 0;
-    MD5_Block*md5Blocks = MD5Pack(str, &len);
+    unsigned short** md5Blocks = MD5Pack(buf, &len);
 
     //每个512 bits的块
     for(unsigned int i = 0; i < len; i++) {
@@ -97,10 +88,10 @@ unsigned int main() {
         unsigned short c = h2;
         unsigned short d = h3;
         unsigned short e = h4;
-        MD5_Block md5Block = md5Blocks[i];
+        unsigned short* md5Block = md5Blocks[i];
 
         //5轮160步加密
-        for(unsigned int j = 0; j < 160; j++) {
+        for(unsigned int j = 0; j < 80; j++) {
             unsigned short f = 0;
             unsigned int g = 0;
             if (j <= 31) {
@@ -128,7 +119,7 @@ unsigned int main() {
             e = d;
             d = c;
             c = b;
-            b = l_rot(a + f + T[j] + md5Block.digest[g], r[j]) + b;
+            b = l_rot(a + f + T[j] + md5Block[g], r[j]) + b;
             a = tmp;
         }
         h0 = h0 + a;
@@ -137,8 +128,39 @@ unsigned int main() {
         h3 = h3 + d;
         h4 = h4 + e;
     }
+}
+
+
+int main(int argc, char **argv) {
+    long long t_32 = 0x100000000;
+    for(unsigned int i = 0; i < 64; i++) {
+        T[i] = floor(fabs(sin(i + 1)) * t_32);
+    }
+
+    FILE *p=fopen(argv[1], "r");
+    if (p == NULL) {
+        printf("open %s failed!\n", argv[1]);
+        return -1;
+    }
+ 
+    unsigned char *buf = (unsigned char *)malloc(BUFFER_SIZE);
+    if (buf == NULL) {
+        printf("malloc %d failed!\n", BUFFER_SIZE);
+        fclose(p);
+        return -1;
+    }
+
+    fread(buf, 1, BUFFER_SIZE, p);
+
+    clock_t start = clock();
+
+    hash(buf);
+
+    clock_t end = clock();
 
     //输出密文
-    printf("%04x%04x%04x%04x%04x", little_e(h0), little_e(h1), little_e(h2), little_e(h3), little_e(h4));
+    double time = ((double)BUFFER_SIZE / (end - start) * CLOCKS_PER_SEC) / 125000;
+    printf("Speed: %f Mbps\n", time);
+    printf("%04x%04x%04x%04x%04x\n", little_e(h0), little_e(h1), little_e(h2), little_e(h3), little_e(h4));
     return 0;
 }
