@@ -41,11 +41,6 @@ unsigned short **MD5Pack(unsigned char* input, unsigned int *length) {
         input[len + pad + 4 + i] = 0;
     }
 
-//    for(unsigned int i = 0; i < len_p; i++) {
-//        printf("%02x", input[i]);
-//    }
-//    printf("\n");
-
     *length = len_p / 64;
     unsigned short **output = (unsigned short**)malloc(sizeof(unsigned short*) * (len_p / 64));
     for (unsigned int i = 0; i < *length; i++) {
@@ -57,7 +52,6 @@ unsigned short **MD5Pack(unsigned char* input, unsigned int *length) {
             unsigned int md5_block_512 = input[j] | input[j + 1] << 8 | input[j + 2] << 16 | input[j + 3] << 24;
             md5Block[k] = (unsigned short)md5_block_512;
             md5Block[k+1] = (unsigned short)(md5_block_512>>4);
-//            printf("%08x", md5Block.digest[k]);
             k = k+2;
         }
         output[i] = md5Block;
@@ -90,36 +84,32 @@ void hash(unsigned char* buf) {
         unsigned short e = h4;
         unsigned short* md5Block = md5Blocks[i];
 
-        //5轮160步加密
         for(unsigned int j = 0; j < 80; j++) {
             unsigned short f = 0;
             unsigned int g = 0;
             if (j <= 31) {
                 f = F(b, c, d, e);
-                g = j;
-            }
-            else if (j >= 32 && j <= 63) {
-                f = G(b, c, d, e);
                 g = (5 * j + 1) & 0x1f;
             }
-            else if (j >= 64 && j <= 95) {
-                f = H(b, c, d, e);
-                g = (3 * j + 5) & 0x1f;
-            }
-            else if (j >= 96 && j <= 127) {
-                f = I(b, c, d, e);
-                g = (7 * j) & 0x1f;
-            }
-            else if (j >= 128 && j <= 159) {
+            else if (j >= 32 && j <= 63) {
                 f = K(b, c, d, e);
                 g = (11 * j + 7) & 0x1f;
+            }
+            else if (j >= 64 && j <= 79) {
+                f = H(b, c, d, e);
+                g = 2*j & 0x1f;
             }
             
             unsigned short tmp = e;
             e = d;
             d = c;
             c = b;
-            b = l_rot(a + f + T[j] + md5Block[g], r[j]) + b;
+            if(j % 2 == 0) {
+                b = even_rot(a + f + T[j] + md5Block[g]) + b;
+            }
+            else {
+                b = odd_rot(a + f + T[j] + md5Block[g]) + b;
+            }
             a = tmp;
         }
         h0 = h0 + a;
@@ -133,7 +123,7 @@ void hash(unsigned char* buf) {
 
 int main(int argc, char **argv) {
     long long t_32 = 0x100000000;
-    for(unsigned int i = 0; i < 64; i++) {
+    for(unsigned int i = 0; i < 80; i++) {
         T[i] = floor(fabs(sin(i + 1)) * t_32);
     }
 
