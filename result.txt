@@ -1,0 +1,7 @@
+test.txt = b545605042be142c1a2e
+test1.txt = 8b4818a32574fab07e63
+test2.txt = 101f9b1524ca0cceb6b0
+test3.txt = 6e6e363fffaa7ce99cfe
+test4.txt = 453fce27cca1630f9842
+test5.txt = 0fea2f16a3fa23fa6b43
+test6.txt = f1714180ba5d2f59ee3a

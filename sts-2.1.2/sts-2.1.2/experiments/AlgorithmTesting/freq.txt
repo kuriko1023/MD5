@@ -1,0 +1,25 @@
+________________________________________________________________________________
+
+		FILE = t		ALPHA = 0.0100
+________________________________________________________________________________
+
+		BITSREAD = 100 0s = 78 1s = 22
+		BITSREAD = 100 0s = 74 1s = 26
+		BITSREAD = 100 0s = 72 1s = 28
+		BITSREAD = 100 0s = 78 1s = 22
+		BITSREAD = 100 0s = 74 1s = 26
+		BITSREAD = 100 0s = 74 1s = 26
+		BITSREAD = 100 0s = 81 1s = 19
+		BITSREAD = 100 0s = 75 1s = 25
+		BITSREAD = 100 0s = 78 1s = 22
+		BITSREAD = 100 0s = 70 1s = 30
+		BITSREAD = 100 0s = 74 1s = 26
+		BITSREAD = 100 0s = 80 1s = 20
+		BITSREAD = 100 0s = 69 1s = 31
+		BITSREAD = 100 0s = 78 1s = 22
+		BITSREAD = 100 0s = 71 1s = 29
+		BITSREAD = 100 0s = 78 1s = 22
+		BITSREAD = 100 0s = 69 1s = 31
+		BITSREAD = 100 0s = 68 1s = 32
+		BITSREAD = 100 0s = 78 1s = 22
+		BITSREAD = 100 0s = 77 1s = 23

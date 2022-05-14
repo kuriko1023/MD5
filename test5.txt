@@ -1,0 +1,721 @@
+from django.shortcuts import render, redirect, get_object_or_404
+import json
+from django.http import JsonResponse, HttpResponse
+from .models import *
+from django.contrib.auth.models import User
+from .forms import *
+from rest_framework.generics import ListAPIView, CreateAPIView, RetrieveAPIView
+from django_filters.rest_framework import DjangoFilterBackend
+from .serializers import *
+from rest_framework.filters import SearchFilter
+from datetime import datetime
+from django.views.generic import DetailView
+from rest_framework.parsers import FormParser, MultiPartParser, JSONParser, FileUploadParser
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework import generics, viewsets, status
+from knox.models import AuthToken
+from knox.views import LoginView as KnoxLoginView
+from rest_framework import permissions
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import MultipleObjectsReturned
+from django.db import IntegrityError, models, router, transaction
+from rest_framework.authtoken.serializers import AuthTokenSerializer
+from django.contrib.auth import login
+from rest_framework import permissions
+from .permissions import *
+from django.http import Http404
+from rest_framework import status
+from django.views.decorators.csrf import csrf_exempt
+from django.core.files.base import ContentFile
+from copy import deepcopy
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from os.path import exists
+import base64, requests
+
+# import get_object_or_404
+# Create your views here.
+
+class RegisterAPI(generics.GenericAPIView):
+    serializer_class = RegisterSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data = request.data)
+        serializer.is_valid(raise_exception = True)
+        user = serializer.save()
+        return Response({
+            "user" : UserSerializer(user, context = self.get_serializer_context()).data,
+            "token" : AuthToken.objects.create(user)[1]
+        })
+
+    def get(self, request):
+        #get the image and those 相关的东西
+        #可以去看Image model
+        data = User.objects.all()
+        serializer = UserSerializer(data, many=True)
+        return HttpResponse(json.dumps(serializer.data), content_type = 'application/json')
+
+@api_view(['DELETE',])
+def register_delete(request, pk):
+    try:
+        account = get_object_or_404(User, id = pk)
+    except User.DoesNotExist:
+        return Response(status=status.HTPP_404_NOT_FOUND)
+
+    if request.method == "DELETE":
+        operation = account.delete()
+        data = {}
+        if operation:
+            response_message = {"message" : "Successfully deleted"}
+        else:
+            response_message = {"message" : "Not Allowed"}
+        return Response(response_message)                
+
+class LoginAPI(KnoxLoginView):
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request, format=None):
+        serializer = AuthTokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.validated_data['user']
+        login(request, user)
+        return super(LoginAPI, self).post(request, format=None)
+
+
+def delete_comment(request, pk):
+    comment = Comment.objects.filter(imagecomment = pk).last()
+    image_id = comment.imagecomment.id
+    if request.method == 'POST':
+        if request.user.username == comment.commenter_name:
+            comment.delete()
+    return redirect('images:imageupload')
+
+
+@login_required
+@api_view(['POST', 'GET'])
+def like_image(request, pk):
+    try:
+        image = get_object_or_404(Image, id = pk)
+    # except MultipleObjectsReturned as e:
+    # # handle the case as you need here
+    #     pass  
+    # except ShowComment.DoesNotExist:
+    #     profile = ShowComment(user = request.user)
+    except Image.DoesNotExist:
+        return Response(status = status.HTTP_404_NOT_FOUND)
+    if request.method == 'POST':
+        images = Image.objects.all().get(id = pk)
+        users= request.COOKIES.get('username', None)
+        userid = User.objects.get(username = users)
+        # boolean = show.likes.filter(id = user).first()
+        # boolean = show.likes.get(id = request.user.id)
+        if images.likes.filter(id = userid.id).exists():
+            # users = request.user.id
+            images.likes.remove(userid.id)
+            images.like_count -= 1
+            result = images.like_count
+            is_like = 0
+            images.save()      
+        else:
+            # users = request.user.id
+            images.likes.add(userid.id)
+            images.like_count += 1
+            result = images.like_count
+            is_like = 1   
+            images.save()     
+        # shows.likes.add(request.user.username)
+        # shows.like_count += 1
+        # shows.save()  
+        return JsonResponse({"like_count" : result, "is_like" : is_like}, status = status.HTTP_200_OK)
+    if request.method == 'GET':
+        images = Image.objects.all().get(id = pk)
+        # queryset = shows.likes.all()
+        users= request.COOKIES.get('username', None)
+        userid = User.objects.get(username = users)
+        if images.likes.filter(id = userid.id).exists():
+            is_like = 1
+        else:
+            is_like = 0    
+        result = images.like_count
+        return JsonResponse({"like_count" : result, "is_like" : is_like}, status = status.HTTP_200_OK)  
+    return Response(status = status.HTTP_400_BAD_REQUEST) 
+
+@login_required
+@api_view(['POST', 'GET'])
+def like_show(request, pk):
+    try:
+        show = get_object_or_404(Show, id = pk)
+    # except MultipleObjectsReturned as e:
+    # # handle the case as you need here
+    #     pass  
+    # except ShowComment.DoesNotExist:
+    #     profile = ShowComment(user = request.user)
+    except Show.DoesNotExist:
+        return Response(status = status.HTTP_404_NOT_FOUND)
+    if request.method == 'POST':
+        shows = Show.objects.all().get(id = pk)
+        users= request.COOKIES.get('username', None)
+        userid = User.objects.get(username = users)
+        # boolean = show.likes.filter(id = user).first()
+        # boolean = show.likes.get(id = request.user.id)
+        if shows.likes.filter(id = userid.id).exists():
+            # users = request.user.id
+            shows.likes.remove(userid.id)
+            shows.like_count -= 1
+            result = shows.like_count
+            is_like = 0
+            shows.save()      
+        else:
+            # users = request.user.id
+            shows.likes.add(userid.id)
+            shows.like_count += 1
+            result = shows.like_count
+            is_like = 1   
+            shows.save()     
+        # shows.likes.add(request.user.username)
+        # shows.like_count += 1
+        # shows.save()  
+        return JsonResponse({"like_count" : result, "is_like" : is_like}, status = status.HTTP_200_OK)
+    if request.method == 'GET':
+        shows = Show.objects.all().get(id = pk)
+        # queryset = shows.likes.all()
+        users= request.COOKIES.get('username', None)
+        userid = User.objects.get(username = users)
+        if shows.likes.filter(id = userid.id).exists():
+            is_like = 1
+        else:
+            is_like = 0    
+        result = shows.like_count
+        return JsonResponse({"like_count" : result, "is_like" : is_like}, status = status.HTTP_200_OK)  
+    return Response(status = status.HTTP_400_BAD_REQUEST)  
+    # def post(self, request, pk):
+    #     def gen_response(code: int, data: str):
+    #         return JsonResponse({
+    #             'code': code,
+    #             'data': data
+    #         }, status=code)
+    #     image_id = request.POST.get('image_id')
+    #     image_obj = Post.objects.get(id = image_id)
+
+    #     if user in image_obj.liked.all():
+    #         image.img.liked.remove(user)
+    #         return gen_response(220, 'Remove Like')   
+    #     else:
+    #         image_obj.liked.add(user)
+    #         return gen_response(221, 'Like added')   
+        
+    #     like, date = Like.objects.get_or_create(user=user, image_id = image_id)
+
+    #     if not date:
+    #         if like.value == 'Like':
+    #             like.value = 'Unlike'
+    #         else:
+    #             like.value = 'Like'
+
+    #     like.save() 
+    # return HttpResponseRedirect(reverse(''))
+
+    
+    
+# def success(request):
+#     return HttpResponse('successfully uploaded', )
+
+# @ login_required
+# def favourite_add(request, id):
+#     image = get_object_or_404(Image, id=id)
+#     if image.favourites.filter(id = request.user.id).exist():
+#         image.favourites.remove(request.user)
+#     else:
+#         image.favourites.add(request.user)
+#     return HttpResponseRedirect(request.META['HTTP_REFERER'])
+
+# class ImageDetailView(DetailView):
+#     model = Image
+#     template_name = 'api/image_details.html'
+
+def images_ordered_byname(request):
+    img = list(Image.objects.all().order_by('name'))
+    form = ImageForm()
+    return render(request, 'api/image_form.html', {'img':img,'form' :form})
+
+def images_ordered_bydate(request):
+    img = Image.objects.all().order_by('date')
+    form = ImageForm()
+    return render(request, 'api/image_form.html', {'img':img,'form' :form})
+
+class ImageList(generics.ListCreateAPIView):
+    queryset = Image.objects.all()
+    serializer_class = ImageSerializer
+    name = 'image-list'
+      
+    filter_fields = (
+        'id',
+        'showid',
+        'name',
+        'category',
+    )
+
+class ShowList(generics.ListCreateAPIView):
+    queryset = Show.objects.all()
+    serializer_class = ShowSerializer
+    name = 'show-list'
+      
+    filter_fields = (
+       'showname',
+    )
+
+class ShowCommentList(generics.ListCreateAPIView):
+    queryset = ShowComment.objects.all()
+    serializer_class = ShowCommentSerializer
+    name = 'showcomment-list'
+      
+    filter_fields = (
+        'showcomment',
+    )
+
+class ImageCommentList(generics.ListCreateAPIView):
+    queryset = Comment.objects.all()
+    serializer_class = ImageCommentSerializer
+    name = 'imagecomment-list'
+      
+    filter_fields = (
+        'imagecomment',
+    )
+
+# class ImageShowIdList(ListAPIView):
+#     def get(self, request, **kwargs):
+#         #get the image and those 相关的东西
+#         #可以去看Image model
+#         data = Image.objects.filter(showid = self.kwargs['pk'])
+#         serializer = ImageSerializer(data, many=True)
+#         return HttpResponse(json.dumps(serializer.data), content_type = 'application/json')
+    # queryset = Image.objects.all()
+    # serializer_class = ImageSerializer
+    # filter_backends = [SearchFilter]
+    # search_fields = ['^showid']
+
+class ImageCategoryList(ListAPIView):
+    queryset = Image.objects.all()
+    serializer_class = ImageSerializer
+    filter_backends = [SearchFilter]
+    search_fields = ['^category']
+
+class UploadView(APIView):
+    def post(self,request):
+        def gen_response(code: int, data: str):
+            return JsonResponse({
+                'code': code,
+                'data': data
+            }, status=code)
+        #can go and imageserializer, it contains showid, name, category, photo, date, liked
+        serializer = ImageSerializer(data = request.data) #可以去看serializer.py 那边的变量有什么
+        if serializer.is_valid(): #如果成功就这样
+            serializer.save()
+            #if is successfully
+            return Response(serializer.data, status = status.HTTP_201_CREATED)  #代表成功, 然后那个201code是前端要       
+        return Response(serializer.errors, status = status.HTTP_400_BAD_REQUEST) #不成功则返回400
+    def get(self, request): #这个是post
+        #get the image and those 相关的东西
+        #可以去看Image model
+        data = Image.objects.all() #这个Models 里面的变量
+        serializer = ImageSerializer(data, many=True)
+        return HttpResponse(json.dumps(serializer.data), content_type = 'application/json') #返回Json 因为前端要json
+
+@login_required
+@api_view(['GET', 'POST'])
+def image_comment_post_api(request, pk):
+    print("image_comment_post_api")
+    try:
+        image = get_object_or_404(Image, pk = pk)
+    except Image.DoesNotExist:
+        return Response(status = status.HTPP_404_NOT_FOUND)
+    except IntegrityError:
+        pass      
+    if request.method == 'GET':
+        comments = Comment.objects.filter(imagecomment = image) 
+        serializers = ImageCommentNameSerializer(comments, many = True)
+        return Response(serializers.data, status = status.HTTP_200_OK)
+    if request.method == 'POST':
+        request.data['user'] = User.objects.get(username = request.data['user']).id
+        serializers = ImageCommentSerializer(data = request.data, context = {'request':request})
+        if serializers.is_valid():
+            serializers.save()
+            return Response(serializers.data, status =status.HTTP_201_CREATED)
+    return Response(serializers.errors, status = status.HTTP_400_BAD_REQUEST)   
+
+@login_required
+@api_view(['GET', 'POST'])
+def show_comment_post_api(request, pk):
+    print("show_comment_post_api")
+    try:
+        show = get_object_or_404(Show, pk = pk)
+    # except MultipleObjectsReturned as e:
+    # # handle the case as you need here
+    #     pass  
+    # except ShowComment.DoesNotExist:
+    #     profile = ShowComment(user = request.user)
+    except Show.DoesNotExist:
+        return Response(status = status.HTPP_404_NOT_FOUND)
+    # except IntegrityError:
+    #     pass
+    if request.method == 'GET':
+        showcomments = ShowComment.objects.filter(showcomment = show)
+        serializers = ShowCommentNameSerializer(showcomments, many = True)
+        return Response(serializers.data, status = status.HTTP_200_OK)
+    if request.method == 'POST':
+        request.data['user'] = User.objects.get(username = request.data['user']).id
+        serializers = ShowCommentSerializer(data = request.data, context = {'request': request})
+        if serializers.is_valid():
+            serializers.save()
+            return Response(serializers.data, status =status.HTTP_201_CREATED)
+    return Response(serializers.errors, status = status.HTTP_400_BAD_REQUEST) 
+
+# class CommentList(generics.ListCreateAPIView):
+#     queryset = ShowComment.objects.all()
+#     serializer_class = ShowCommentSerializer
+#     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+#     def perform_create(self, serializer):
+#         serializer.save(owner=self.request.user)
+
+# class CommentDetail(generics.RetrieveUpdateDestroyAPIView):
+#     queryset = ShowComment.objects.all()
+#     serializer_class = ShowCommentSerializer
+#     permission_classes = [permissions.IsAuthenticatedOrReadOnly,
+#                           IsOwnerOrReadOnly]
+
+def get_token():
+    ak = "kgKKZEKuX7xtsTFrMGAUYzQZ"
+    sk = "10ZGtAY8htZD9cijG8fZ6otb6aPa8zTf"
+    host = 'https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id='+ak+'&client_secret='+sk
+    response = requests.post(host)
+    if response:
+        return response.json()['access_token']
+    
+def get_image(request_url,params):
+    token = "24.4665a0f9fc3589b8a80f0cc2557fbd70.2592000.1653995132.282335-25910544"
+    request_url = request_url + "?access_token=" + token
+    headers = {'content-type': 'application/x-www-form-urlencoded'}
+    response = requests.post(request_url, data=params, headers=headers)
+    # with open("Outputresponse.txt", "w") as text_file:
+    #     for key, value in response.json().items():
+    #         text_file.write(key)
+    #         text_file.write(" : ")
+    #         text_file.write(str(value))
+    #         text_file.write("/n")
+            # text_file.write("asdasdas")
+            # text_file.write(response.json()['error_msg'])
+    if 'image' in response.json():
+        return response.json()['image']
+    else:
+        return 0
+    
+def colourize(img64):
+    request_url = "https://aip.baidubce.com/rest/2.0/image-process/v1/colourize"
+    params = {"image":img64}
+    return get_image(request_url,params)
+    
+def style_trans(img64,style):
+    request_url = "https://aip.baidubce.com/rest/2.0/image-process/v1/style_trans"
+    params = {"image":img64,"option":style}
+    return get_image(request_url,params)
+
+def dehaze(img64):
+    request_url = "https://aip.baidubce.com/rest/2.0/image-process/v1/dehaze"
+    params = {"image":img64}
+    return get_image(request_url,params)
+
+def contrast_enhance(img64):
+    request_url = "https://aip.baidubce.com/rest/2.0/image-process/v1/contrast_enhance"
+    params = {"image":img64}
+    return get_image(request_url,params)
+
+def image_quality_enhance(img64):
+    request_url = "https://aip.baidubce.com/rest/2.0/image-process/v1/image_quality_enhance"
+    params = {"image":img64}
+    return get_image(request_url,params)
+
+def stretch_restore(img64):
+    request_url = "https://aip.baidubce.com/rest/2.0/image-process/v1/stretch_restore"
+    params = {"image":img64}
+    return get_image(request_url,params)
+
+def inpainting(img64,rectangle):
+    request_url = "https://aip.baidubce.com/rest/2.0/image-process/v1/inpainting"
+    params = {"rectangle":rectangle,"image":img64}
+    return get_image(request_url,params)
+
+def image_definition_enhance(img64):
+    request_url = "https://aip.baidubce.com/rest/2.0/image-process/v1/image_definition_enhance"
+    params = {"image":img64}
+    return get_image(request_url,params)
+
+#don't use
+def color_enhance(img64):
+    request_url = "https://aip.baidubce.com/rest/2.0/image-process/v1/color_enhance"
+    params = {"image":img64}
+    return get_image(request_url,params)
+
+
+
+
+def upload_from_back(newimg, method, id, oldpk, step):
+    
+    tempimg = Image.objects.all().filter(pk=oldpk).first()
+    createimg = Image()
+    new_file_path = tempimg.photo.name[:-4] + "step_" + step + ".jpg"
+    if exists("media/" + new_file_path):
+        return "error"
+    with open("media/" +new_file_path, "wb") as file:
+        file.write(newimg)
+    # old_likes = tempimg.likes.all()
+    createimg.showid = id
+    createimg.photo = new_file_path
+    createimg.name = tempimg.name + step
+    createimg.process_method = method
+    createimg.previmgpk = tempimg.pk
+    createimg.process_step = tempimg.process_step + 1
+    createimg.save()
+    # tempimg.likes.set(old_likes)
+    
+    imgjson = {
+        "showid": tempimg.showid,
+        "pk": tempimg.pk,
+        "name": tempimg.name,
+        "category": tempimg.category,
+        "photo": tempimg.photo.name,
+        # "date": tempimg.date,
+        "process_step": tempimg.process_step
+    }
+    # with open("Output.txt", "w") as text_file:
+    #     text_file.write(json.dumps(imgjson))
+    # return imgjson
+    return createimg.pk
+
+@csrf_exempt
+def upload_process(request):
+        if request.method == "POST":
+            # body_unicode = request.body.decode('utf-8')
+            data = request.POST
+            
+
+            style = ""
+            # if (request.POST.get('style')):
+            #     style = request.POST.get('style')
+            # # methods = request.POST.get('method')
+            methodlist = ['colourize', 'dehaze', 'contrast_enhance', 'image_quality_enhance', 'stretch_restore', 'image_definition_enhance']
+            
+            method0 = data['method0']
+            is_valid_method0 = any(method in method0 for method in methodlist)
+            # print(method0)
+            method1 = data['method1']
+            is_valid_method1 = any(method in method1 for method in methodlist)
+            # print(method1)
+            method2 = data['method2']
+            is_valid_method2 = any(method in method2 for method in methodlist)
+            # print(method2)/
+            if not is_valid_method0 or not is_valid_method1 or not is_valid_method2:
+                # print("invalid methoods")
+                return HttpResponse(status=status.HTTP_400_BAD_REQUEST)
+
+            createimg = Image()
+            id = data['id']
+            if not Show.objects.all().filter(pk = id).exists():
+                return JsonResponse({"message": "show with given id not found"},status = status.HTTP_404_NOT_FOUND)
+            img = request.FILES.get('file')
+            createimg.showid = id
+            createimg.photo = img
+            createimg.name = createimg.photo.name[:-4]
+            createimg.save()
+
+            f = open("media/" + createimg.photo.name, 'rb')
+            img64 = base64.b64encode(f.read())
+            # print(method1)
+            # print(img64)
+            # newimgjson = image_process(img64, methods[0], id, style, newimg.pk)
+            new64 = image_process(img64, method0)
+            if isinstance(new64, int):
+                return JsonResponse({"message" : "Failed at step 1 call to Baidu API"}, status = status.HTTP_400_BAD_REQUEST)
+            # print(new64)
+            newimg = base64.b64decode(new64)
+            newpk = upload_from_back(newimg, method0, id, createimg.pk, '1')
+            new64_1 = image_process(new64, method1)
+            if isinstance(new64_1, int):
+                return JsonResponse({"message" : "Failed at step 2 call to Baidu API"}, status = status.HTTP_400_BAD_REQUEST)
+            newimg = base64.b64decode(new64_1)
+            newpk1 = upload_from_back(newimg, method1, id, newpk, '2')
+            new64_2 = image_process(new64_1, method2)
+            if isinstance(new64_2, int):
+                return JsonResponse({"message" : "Failed at step 2 call to Baidu API"}, status = status.HTTP_400_BAD_REQUEST)
+            newimg = base64.b64decode(new64_2)
+            upload_from_back(newimg, method2, id, newpk1, '3')
+            return HttpResponse(status =status.HTTP_201_CREATED)
+
+#image: base64 bytes, method: string, style: string, default empty, oldpk: primary key of old image
+def image_process(img64, method):
+    # if request.method == "POST":
+    #     dic = json.loads(request.body)
+    #     old_image = Image.objects.all().filter(pk=dic['pk']).first()
+    
+    #     old_image_path = old_image.photo.name
+    #     f = open(old_image_path, 'rb')
+    #     img64 = base64.b64encode(f.read())
+
+    #     # with open("Output.txt", "w") as text_file:
+    #     #     text_file.write("asdasdas")
+    #     #     text_file.write("Old image path is:" + old_image_path)
+    #     #     text_file.write(str(img64))
+
+    # if method == 'style_trans':  
+    #     new64 = style_trans(img64, style)
+    #     newimg = base64.b64decode(new64)
+    #     upload_from_back(newimg, method, showid, origpk, step)
+    #     return newimg
+    # elif method == 'inpainting':
+    #     new64 = inpainting(img64, style)
+    #     newimg = base64.b64decode(new64)
+    #     upload_from_back(newimg, method, showid, origpk, step)
+    #     return newimg
+    if method == 'colourize':
+        new64 = colourize(img64)
+        return new64
+    elif method == 'dehaze':
+        new64 = dehaze(img64)
+        # newimg = base64.b64decode(new64)
+        # upload_from_back(newimg, method, showid, origpk, step)
+        return new64
+    elif method == 'contrast_enhance':
+        new64 = contrast_enhance(img64)
+        # newimg = base64.b64decode(new64)
+        # upload_from_back(newimg, method, showid, origpk, step)
+        return new64
+    elif method == 'image_quality_enhance':
+        new64 = image_quality_enhance(img64)
+        # newimg = base64.b64decode(new64)
+        # upload_from_back(newimg, method, showid, origpk, step)
+        return new64
+    elif method == 'stretch_restore':
+        new64 = stretch_restore(img64)
+        # newimg = base64.b64decode(new64)
+        # upload_from_back(newimg, method, showid, origpk, step)
+        return new64
+    elif method == 'image_definition_enhance':
+        new64 = image_definition_enhance(img64)
+        # newimg = base64.b64decode(new64)
+        # upload_from_back(newimg, method, showid, origpk, step)
+        return new64
+    # else:
+    #     return HttpResponse(status = status.HTTP_400_BAD_REQUEST)
+
+
+
+
+def all_shows(request):
+    if request.method == 'GET':
+        shows = list(Show.objects.values())
+        return JsonResponse({'shows': shows})
+    else: 
+        return HttpResponse(status = status.HTTP_400_BAD_REQUEST)
+
+
+def new_show(request):
+    if request.method == 'POST':
+        dic = json.loads(request.body)
+        showname = dic['name']
+        if not Show.objects.all().filter(showname = showname).exists():
+            newshow = Show(showname = showname)
+            newshow.save()
+            return HttpResponse(status = status.HTTP_201_CREATED)
+        else:
+            return HttpResponse(status = status.HTTP_409_CONFLICT)
+    else: 
+        return HttpResponse(status = status.HTTP_400_BAD_REQUEST)
+
+def get_image_process_history(request):
+    if request.method == 'GET':
+        picid = request.GET.get('pic_id')
+        if not Image.objects.all().filter(pk=picid).exists():
+            return JsonResponse({})
+        pic = Image.objects.all().filter(pk = picid).first()
+        if pic.process_step == 3:
+            step2pic = Image.objects.all().filter(pk = pic.previmgpk).first()
+            # step2method = step2pic.process_method
+            step1pic = Image.objects.all().filter(pk = step2pic.previmgpk).first()
+            # step1method = step1pic.process_method
+            origpic = Image.objects.all().filter(pk = step1pic.previmgpk).first()
+            imgjson = {
+                "name": origpic.name,
+                "showid": origpic.showid,
+                "currstep": 3,
+                "creation_time": pic.date,
+                "file": [{"method": "original", "path": "http://8888-deadlinewarriors.app.secoder.net/media/" + origpic.photo.name}, {"method": step1pic.process_method, "path": "http://8888-deadlinewarriors.app.secoder.net/media/" + step1pic.photo.name}, {"method": step2pic.process_method, "path": "http://8888-deadlinewarriors.app.secoder.net/media/" + step2pic.photo.name}, {"method": pic.process_method, "path": "http://8888-deadlinewarriors.app.secoder.net/media/" + pic.photo.name}]
+                # "process_methods": ["original", step1pic.process_method, step2pic.process_method, pic.process_method],
+                # "filepaths": [origpic.photo.name, step1pic.photo.name, step2pic.photo.name, pic.photo.name], 
+            }
+            return JsonResponse(imgjson, status = status.HTTP_200_OK)
+        elif pic.process_step == 2:
+            step1pic = Image.objects.all().filter(pk = pic.previmgpk).first()
+            # step1method = step1pic.process_method
+            origpic = Image.objects.all().filter(pk = step1pic.previmgpk).first()
+            imgjson = {
+                "name": origpic.name,
+                "showid": origpic.showid,
+                "creation_time": pic.date,
+                "currstep": 2,
+                "file": [{"method": "original", "path": "http://8888-deadlinewarriors.app.secoder.net/media/" + origpic.photo.name}, {"method": step1pic.process_method, "path": "http://8888-deadlinewarriors.app.secoder.net/media/" + step1pic.photo.name}, {"method": pic.process_method, "path": "http://8888-deadlinewarriors.app.secoder.net/media/" + pic.photo.name}]
+                # "process_methods": ["original", step1pic.process_method, pic.process_method],
+                # "filepaths": [origpic.photo.name, step1pic.photo.name, pic.photo.name], 
+            }
+            return JsonResponse(imgjson, status = status.HTTP_200_OK)
+        elif pic.process_step == 1:
+            origpic = Image.objects.all().filter(pk = pic.previmgpk).first()
+            imgjson = {
+                "name": origpic.name,
+                "showid": origpic.showid,
+                "creation_time": pic.date,
+                "currstep": 1,
+                "file": [{"method": "original", "path": "http://8888-deadlinewarriors.app.secoder.net/media/" + origpic.photo.name}, {"method": pic.process_method, "path": "http://8888-deadlinewarriors.app.secoder.net/media/" + pic.photo.name}]
+                # "process_methods": ["original", pic.process_method],
+                # "filepaths": [origpic.photo.name, pic.photo.name]
+            }
+            return JsonResponse(imgjson, status = status.HTTP_200_OK)
+        elif pic.process_step == 0:
+            imgjson = {
+                "name": pic.name,
+                "showid": pic.showid,
+                "creation_time": pic.date,
+                "currstep": 0,
+                "file": [{"method": "original", "path": "http://8888-deadlinewarriors.app.secoder.net/media/" + pic.photo.name}]
+                # "process_methods": ["original"],
+                # "filepaths": [pic.photo.name]
+            }
+            return JsonResponse(imgjson, status = status.HTTP_200_OK)
+    else:
+        return HttpResponse(status = status.HTTP_400_BAD_REQUEST)
+
+
+def process_existing(request):
+    if request.method == "POST":
+        dic = json.loads(request.body)
+        picid = dic["pic_id"]
+        if not Image.objects.all().filter(pk=picid).exists():
+            return HttpResponse(status=status.HTTP_404_NOT_FOUND)
+        oldimg = Image.objects.all().filter(pk=picid).first()
+        if oldimg.process_step == 3:
+            return HttpResponse(status=status.HTTP_400_BAD_REQUEST)
+        oldimgpath = oldimg.photo.name
+        f = open("media/" + oldimgpath, 'rb')
+        img64 = base64.b64encode(f.read())
+        # funcdic = {'colourize': colourize, 'dehaze': dehaze, 'contrast_enhance': contrast_enhance, 'image_quality_enhance': image_quality_enhance, 'stretch_restore': stretch_restore, 'image_definition_enhance': image_definition_enhance}
+        # funcdic[dic['method']]()
+        new64 = image_process(img64, dic['method'])
+        if isinstance(new64, int):
+            return JsonResponse({"message" : "Failed at call to Baidu API"}, status = status.HTTP_400_BAD_REQUEST)
+        newimg = base64.b64decode(new64)
+        if isinstance(upload_from_back(newimg, dic['method'], oldimg.showid, oldimg.pk, str(oldimg.process_step + 1)), str):
+            return HttpResponse(status = status.HTTP_409_CONFLICT)
+        return HttpResponse(status = status.HTTP_201_CREATED)
+
+
+lat yang canggih ini terhadap para pelajar. Bagi mengelakkan perkara-perkara tersebut berlaku, adalah lebih baik para pelajar menggunakan telefon bimbit apabila dewasa nanti kerana telefon bimbit memerlukan kos penggunaan yang tinggi. Namun demikian, semua hal ini tertakluk kepada diri individu itu sendiri bak peribahasa tepuk dada tanyalah selera.

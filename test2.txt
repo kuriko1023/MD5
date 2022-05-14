@@ -1,0 +1,24 @@
+作者：知乎小管家
+链接：https://www.zhihu.com/question/19550695/answer/95070154
+来源：知乎
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+
+本问题隶属于「知乎官方指南」：属于「知乎官方指南」的问答有哪些？--在知乎上回答问题有一个基本原则：尽可能提供详细的解释和说明。不要灌水——不要把「评论」当作「答案」来发布。如果你对问题本身或别人的答案有自己的看法，你可以通过「评论」来进行，不要把评论当作答案来发布。那样的话，该回答会被其他用户点击「没有帮助」而折叠起来，反而起不到实际效果，也无助于提供高质量的答案。--------关于回答---------支撑你的答案的原因当你在回答问题的时候，如果能带着『别人在阅读我的答案时心里会问我 「为什么？」』这个假设，你就能写出更详细、有用的解释和说明。如果你提出了一个观点，请说明你为什么这样认为，这对你的读者将会非常有帮助。提供有用的信息在写答案时，提供一些与问题相关的有价值的信息，对于读者也同样有帮助。介绍链接指向的内容如果你提供了一个其他网页的链接，尽可能介绍一下这个链接指向的内容是什么，这样其他人可以更好地判断是否需要点击这个链接。避免与问题本身无关或没有意义的回答没有意义的文字，或者由字符组成的与问题无关图案或表情等，应当避免。此外，知乎不允许在回答中对他人进行人身攻击、诽谤或恶意骚扰。发布于 2016-04-13 13:48
+
+As of 17 November 2021, Special:Statistics showed 4,000,129,529 words across 6,410,000 articles implying an average of 624 words per article.
+As of 2021, 33,201 GB (=33,997,900,893 bytes) across 4,000 million words, implying 8.3 bytes/word. ASCII uses 1 byte/character which in turn implies 8.3 characters/word. However, this includes wikimarkup, and 5 char/word plus one for space or punctuation mark is standard, so 6 characters/word will be assumed.
+There are currently 6,497,868 articles, which means 4.05492954672×109 words, which means 2.432957728032×1010 characters.
+One volume: 25cm high, 5cm thick. 500 leaves, 2 pagefaces per leaf, 2 columns per pageface, 80 rows/column, 50 characters per row. So one volume = 8,000,000 characters, or 1,333,333 words, or 2,136.6 articles. (Pictures not included!)
+Sanity check: Encyclopædia Britannica has 44 million words across 32 volumes, or 1,375,000 words per volume.
+Thus, the text of the English Wikipedia is currently equivalent to 3,041.2 volumes of Encyclopædia Britannica.
+In other words, Wikipedia is approximately 95.04 times the size of Encyclopædia Britannica.
+
+Studies that estimate and rank the most common words in English examine texts written in English. Perhaps the most comprehensive such analysis is one that was conducted against the Oxford English Corpus (OEC), a massive text corpus that is written in the English language.
+
+In total, the texts in the Oxford English Corpus contain more than 2 billion words.[1] The OEC includes a wide variety of writing samples, such as literary works, novels, academic journals, newspapers, magazines, Hansard's Parliamentary Debates, blogs, chat logs, and emails.[2]
+
+Another English corpus that has been used to study word frequency is the Brown Corpus, which was compiled by researchers at Brown University in the 1960s. The researchers published their analysis of the Brown Corpus in 1967. Their findings were similar, but not identical, to the findings of the OEC analysis.
+
+According to The Reading Teacher's Book of Lists, the first 25 words in the OEC make up about one-third of all printed material in English, and the first 100 words make up about half of all written English.[3] According to a study cited by Robert McCrum in The Story of English, all of the first hundred of the most common words in English are of Anglo-Saxon origin,[4] except for "people", ultimately from Latin "populus", and "because", in part from Latin "causa".
+
+Some lists of common words distinguish between word forms, while others rank all forms of a word as a single lexeme (the form of the word as it would appear in a dictionary). For example, the lexeme be (as in to be) comprises all its conjugations (is, was, am, are, were, etc.), and contractions of those conjugations.[5] These top 100 lemmas listed below account for 50% of all the words in the Oxford English Corpus.[1]

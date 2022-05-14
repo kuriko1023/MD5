@@ -1,0 +1,99 @@
+from rest_framework import serializers
+from .models import *
+from django.contrib.auth.models import User
+
+#User Serializer
+class UserSerializer(serializers.ModelSerializer):
+    # comments = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+    class Meta:
+        model = User
+        fields = ('id', 'username')
+
+#Register Serializer
+class RegisterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'username', 'password')
+        extra_kwargs = {'password': {'write_only': True}}
+
+    #有username, password
+    def create(self, validated_data):
+        user = User.objects.create_user(validated_data['username'],validated_data['password'])
+        user.set_password(validated_data['password'])
+        user.save()
+
+        return user
+
+# class ShowSerializer(serializers.ModelSerializer):
+#     user = serializers.ReadOnlyField(source='user.username')
+#     comments = serializers.PrimaryKeyRelatedField(many=True, read_only=True)
+
+#     class Meta:
+#         model = Show
+#         fields = ['id', 'user', 'comments']
+
+#image 的，有展览号，名字，标签，照片，时间，有无点赞
+class ImageSerializer(serializers.ModelSerializer):
+    likes = serializers.PrimaryKeyRelatedField(many = True, queryset = User.objects.all())
+
+    class Meta:
+        model = Image
+        fields = ('id', 'showid','name', 'category', 'photo', 'jianjie', 'date', 'likes')
+        # fields = ('showid','name', 'category', 'photo', 'date')
+
+class ShowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Show
+        fields = '__all__'
+
+#comment的，有对应的照片comment，作者，comment的东西，时间
+class ImageCommentNameSerializer(serializers.ModelSerializer):
+    user = serializers.ReadOnlyField(source = 'user.username')
+    class Meta:
+        model = Comment
+        fields =  ('imagecomment','user', 'comment_body', 'date_added')
+
+class ImageCommentSerializer(serializers.ModelSerializer):
+    # user = serializers.CharField(source = 'user.username', write_only = True)
+    user = serializers.PrimaryKeyRelatedField(queryset = User.objects.all(), write_only = True)
+    # userid = serializers.ReadOnlyField(source = 'user.id')
+    class Meta:
+        model = Comment
+        fields =  ('imagecomment','user', 'comment_body', 'date_added')
+
+    def create(self, validated_data):
+        return Comment.objects.create(**validated_data)
+
+class ShowCommentSerializer(serializers.ModelSerializer):
+    # username = serializers.SerializerMethodField("get_user")
+    # user = serializers.SlugRelatedField(slug_field = 'username', queryset=User.objects.all(), write_only=True)
+    user = serializers.PrimaryKeyRelatedField(queryset = User.objects.all(), write_only = True)
+    # userid = serializers.ReadOnlyField(source = 'user.id')
+    class Meta:
+        model = ShowComment
+        fields =  ('showcomment','user', 'comment_body', 'date_added')
+
+    def create(self, validated_data):
+        return ShowComment.objects.create(**validated_data)    
+
+    # def get_user(self, obj):
+    #     return obj.user.username   
+
+class ShowCommentNameSerializer(serializers.ModelSerializer):
+    # username = serializers.SerializerMethodField("get_user")
+    # user = serializers.SlugRelatedField(slug_field = 'username', queryset=User.objects.all(), write_only=True)
+    # user = serializers.PrimaryKeyRelatedField(queryset = User.objects.all(), write_only = True)
+    # userid = serializers.ReadOnlyField(source = 'user.id')
+    user = serializers.ReadOnlyField(source = 'user.username')
+    class Meta:
+        model = ShowComment
+        fields =  ('showcomment','user', 'comment_body', 'date_added')
+
+class LikeSerializer(serializers.ModelSerializer):
+    # total_likes = serializers.SerializerMethodField()
+
+    model = Like
+    fields = '__all__'
+    
+    # def get_total_likes(self, instance):
+    #     return instance.
