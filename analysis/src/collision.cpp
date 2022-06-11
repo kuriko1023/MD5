@@ -88,7 +88,7 @@ void test() {
 }
 
 int main(){
-    // collision_attack();
-    test();
+    collision_attack();
+    // test();
     return 0;
 }
