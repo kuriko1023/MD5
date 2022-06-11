@@ -46,15 +46,15 @@ string UWP1::hash(const string& message) {
     memcpy(output, BUF, 10);
 
     // print to the terminal
-    printf("Hash = 0x");
+    // printf("Hash = 0x");
     string res;
     for (int i = 0; i < sizeof(output); i++) {
-        printf("%.2x", output[i]);
+        // printf("%.2x", output[i]);
         char* tmp = new char[5];
         sprintf(tmp, "%.2x", output[i]);
         res += string(tmp);
     }
-    printf("\n");
+    // printf("\n");
     return res;
 }
 
