@@ -20,7 +20,7 @@ $$N = n - d + d(\frac{d-1}{d})^n$$
 测试代码运行方法（analysis/src目录下）：
 ```shell
 make
-./collision
+./collision 0
 ```
 
 检测结果：当测试量增大到1000000时，碰撞概率达到0.56
@@ -30,4 +30,16 @@ total uuid = 1000000
 total hash = 439945
 total collision = 560055
 P(collision) = 0.560055
+```
+
+## 第二原像攻击
+```shell
+make
+./collision 1
+```
+
+## 测试
+```shell
+make
+./collision 2
 ```

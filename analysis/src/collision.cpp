@@ -8,6 +8,7 @@
 using namespace std;
 
 #define testNum 100000
+#define secondPreimageNum 100000
 
 string randstr(int length) {
     char tmp;
@@ -79,16 +80,51 @@ void collision_attack() {
     cout << "All collisions have been saved to collision.txt." << endl;
 }
 
+void second_preimage_attack(string x) {
+    UWP1 uwp;
+    vector<string> input_arr;
+    string x_hash = uwp.hash(x);
+    string hash;
+    int succeed_flag = 0;
+    for(int i = 0; i < secondPreimageNum; i++) {
+        string buffer;
+        buffer = randstr(x.length());
+        while (find(input_arr.begin(), input_arr.end(), buffer) != input_arr.end() | buffer == x) {
+            buffer = randstr(x.length());
+        }
+        hash = uwp.hash(buffer);
+        if(hash == x_hash) {
+            cout << "Second-preimage attack succeed with " << i << " attempts!" << endl;
+            cout << "Input: " << x << " HASH(Input): 0x" << x_hash << endl;
+            cout << "Output: " << buffer << " HASH(Output): 0x" << hash << endl;
+            succeed_flag = 1;
+            i = secondPreimageNum;
+        }
+    }
+    if(succeed_flag == 0) {
+        cout << "Second-preimage attack failed with " << secondPreimageNum << " attempts!" << endl;
+    }
+}
+
 void test() {
     UWP1 uwp;
-    string x = "tsAOabCR24EKOg2HNpQqjwhwaycPH9Xgldbsfg3I";
-    string y = "kZPqqaB2cKCHzOZefvTmrsBrXbqKKdBOBlKuRFHP";
+    string x = "a";
+    string y = "b";
     cout << "X: " << x << " HASH(X): 0x" << uwp.hash(x) << endl;
     cout << "Y: " << y << " HASH(Y): 0x" << uwp.hash(y) << endl;
 }
 
-int main(){
-    collision_attack();
-    // test();
+int main(int argc, char **argv) {
+    // 0: collision attack; 1: second preimage attack; 2: test
+    if (strcmp(argv[1], "0") == 0) {
+        collision_attack();
+    }
+    else if (strcmp(argv[1], "1") == 0) {
+        string x = "RjndubmrrNgo1s0dPbIJJ9adb0cgkp35j1njB63p1OIB7F28O";
+        second_preimage_attack(x);
+    }
+    else if (strcmp(argv[1], "2") == 0) {
+        test();
+    }
     return 0;
 }
