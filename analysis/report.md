@@ -55,7 +55,7 @@ make
 ```
 
 ## 随机性检测
-生成的hash值序列在当前目录下的hash.txt中。
+生成的hash值序列在当前目录下的hash.txt中。通过修改collision.cpp中的generateNum来修改生成hash值的数量。
 ```shell
 make clean
 make
