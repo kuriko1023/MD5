@@ -12,7 +12,7 @@ using namespace std;
 #define secondPreimageNum 10000000
 #define rainbowNum 1
 #define rainbowLinks 100000
-#define generateNum 1250000
+#define generateNum 625000
 
 struct Pass_Hash
 {
