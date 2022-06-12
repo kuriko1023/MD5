@@ -19,6 +19,7 @@ $$N = n - d + d(\frac{d-1}{d})^n$$
 
 测试代码运行方法（analysis/src目录下）：
 ```shell
+make clean
 make
 ./collision 0
 ```
@@ -34,12 +35,29 @@ P(collision) = 0.560055
 
 ## 第二原像攻击
 ```shell
+make clean
 make
 ./collision 1
 ```
 
 ## 测试
 ```shell
+make clean
 make
 ./collision 2
+```
+
+## 彩虹表
+```shell
+make clean
+make
+./collision 3
+```
+
+## 随机性检测
+生成的hash值序列在当前目录下的hash.txt中。
+```shell
+make clean
+make
+./collision 4
 ```
